@@ -6,10 +6,7 @@
   "scripts": {
     "test": "tape test.js"
   },
-  "keywords": [
-    "cartocss",
-    "gl"
-  ],
+  "keywords": ["cartocss", "gl"],
   "author": "Tom MacWright",
   "license": "ISC",
   "dependencies": {
@@ -19,6 +16,7 @@
   },
   "devDependencies": {
     "mapbox-studio-streets-basic": "^6.0.1",
+    "prettier": "^2.7.1",
     "tape": "^4.0.0"
   }
 }
