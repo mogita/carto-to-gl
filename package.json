@@ -4,14 +4,19 @@
   "description": "converts cartocss to gl",
   "main": "index.js",
   "scripts": {
-    "test": "tape test.js"
+    "test": "tape test.js",
+    "test_sla": "tape test_sla.js"
   },
-  "keywords": ["cartocss", "gl"],
+  "keywords": [
+    "cartocss",
+    "gl"
+  ],
   "author": "Tom MacWright",
   "license": "ISC",
   "dependencies": {
     "carto": "https://github.com/mapbox/carto/archive/low-level.tar.gz",
     "js-yaml": "^3.2.7",
+    "lodash": "^4.17.21",
     "underscore": "^1.8.3"
   },
   "devDependencies": {
