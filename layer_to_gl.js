@@ -3,7 +3,9 @@ const lo = require('lodash')
 const glEquiv = {
   'LineSymbolizer/stroke': 'paint/line-color',
   'LineSymbolizer/stroke-width': 'paint/line-width',
+
   'PolygonSymbolizer/fill': 'paint/fill-color',
+
   'TextSymbolizer/size': 'layout/text-size',
   'TextSymbolizer/fill': 'paint/text-color',
   'TextSymbolizer/face-name': 'layout/text-font',
@@ -15,7 +17,7 @@ const glEquiv = {
   'TextSymbolizer/placement': 'layout/symbol-placement',
   'TextSymbolizer/placements': '__omit__',
   'TextSymbolizer/vertical-alignment': '__omit__',
-  'TextSymbolizer/placement-type': '__omit__',
+  'TextSymbolizer/placement-type': 'layout/symbol-placement',
   'TextSymbolizer/wrap-before': '__omit__',
   'TextSymbolizer/orientation': 'layout/text-rotate',
   'TextSymbolizer/text-transform': 'layout/text-transform',
@@ -26,20 +28,84 @@ const glEquiv = {
   'TextSymbolizer/minimum-distance': 'layout/symbol-spacing',
   'TextSymbolizer/avoid-edges': 'layout/symbol-avoid-edges',
   'TextSymbolizer/line-spacing': 'layout/text-line-height',
+  'TextSymbolizer/spacing': 'layout/symbol-spacing',
+  'TextSymbolizer/opacity': 'paint/text-opacity',
+  'TextSymbolizer/label-position-tolerance': '__omit__',
+  'TextSymbolizer/text-ratio': '__omit__',
+
+  'ShieldSymbolizer/size': 'layout/text-size', // The size of the text for the shield-name property, in pixels.
+  'ShieldSymbolizer/minimum-distance': 'layout/symbol-spacing',
+  'ShieldSymbolizer/halo-fill': 'paint/text-halo-color',
+  'ShieldSymbolizer/halo-radius': 'paint/text-halo-blur',
+  'ShieldSymbolizer/placement': 'layout/symbol-placement',
+  'ShieldSymbolizer/placement-type': 'layout/symbol-placement',
+  'ShieldSymbolizer/placements': '__omit__',
+  'ShieldSymbolizer/unlock-image': '__omit__',
+  'ShieldSymbolizer/face-name': 'layout/text-font',
+  'ShieldSymbolizer/fill': 'paint/text-color',
+  'ShieldSymbolizer/avoid-edges': 'layout/symbol-avoid-edges',
+  'ShieldSymbolizer/file': 'layout/icon-image',
+
+  'MarkersSymbolizer/allow-overlap': 'layout/icon-allow-overlap',
+  'MarkersSymbolizer/placement': 'layout/symbol-placement',
+  'MarkersSymbolizer/width': 'layout/icon-size',
+  'MarkersSymbolizer/file': 'layout/icon-image',
+  'MarkersSymbolizer/marker-type': 'layout/icon-image',
+  'MarkersSymbolizer/stroke': 'paint/circle-stroke-color',
+  'MarkersSymbolizer/stroke-opacity': 'paint/circle-stroke-opacity',
+  'MarkersSymbolizer/stroke-width': 'paint/circle-stroke-width',
+  'MarkersSymbolizer/fill-opacity': 'paint/circle-opacity',
+  'MarkersSymbolizer/fill': 'paint/circle-color',
+  'MarkersSymbolizer/spacing': 'layout/symbol-spacing',
+  'MarkersSymbolizer/opacity': '__omit__',
+
+  'LineSymbolizer/smooth': '__omit__',
+  'LineSymbolizer/rasterizer': '__omit__',
+  'LineSymbolizer/stroke-dasharray': 'paint/line-dasharray',
+  'LineSymbolizer/stroke-linecap': 'layout/line-cap',
+  'LineSymbolizer/stroke-linejoin': 'layout/line-join',
+  'LineSymbolizer/stroke-opacity': 'paint/line-opacity',
 }
 
 const pixelToEm = (input) => Number(input) * 0.063 // presuming the base font-size is 16px
+const ensureNumber = (input) => Number(input)
+const stringToBoolean = (input) => input === 'true' // turn string representation of 'true' or 'false' to an actual boolean
+const stringToArray = (input) => [input]
 
 const glConv = {
+  'TextSymbolizer/allow-overlap': stringToBoolean,
   'TextSymbolizer/wrap-width': pixelToEm,
+  'TextSymbolizer/face-name': stringToArray,
   'TextSymbolizer/character-spacing': pixelToEm,
   'TextSymbolizer/placement': () => 'point',
+  'TextSymbolizer/placement-type': () => 'point',
   'TextSymbolizer/horizontal-alignment': () => 'point',
-  'TextSymbolizer/orientation': (input) => Number(input),
+  'TextSymbolizer/orientation': ensureNumber,
   'TextSymbolizer/dx': pixelToEm,
   'TextSymbolizer/dy': pixelToEm,
-  'TextSymbolizer/avoid-edges': (input) => input === 'true', // turn string representation of 'true' or 'false' to an actual boolean
+  'TextSymbolizer/avoid-edges': stringToBoolean,
+  'TextSymbolizer/halo-radius': ensureNumber,
   'TextSymbolizer/line-spacing': pixelToEm,
+  'TextSymbolizer/spacing': ensureNumber,
+  'TextSymbolizer/opacity': ensureNumber,
+
+  'ShieldSymbolizer/size': ensureNumber,
+  'ShieldSymbolizer/halo-radius': ensureNumber,
+  'ShieldSymbolizer/placement': () => 'point',
+  'ShieldSymbolizer/placement-type': () => 'point',
+  'ShieldSymbolizer/face-name': stringToArray,
+  'ShieldSymbolizer/avoid-edges': stringToBoolean,
+
+  'MarkersSymbolizer/allow-overlap': stringToBoolean,
+  'MarkersSymbolizer/placement': () => 'point',
+  'MarkersSymbolizer/width': () => 1, // marker is not a layer type in gl, converting to icon with sprite and set to original size (i.e. 100%)
+  'MarkersSymbolizer/stroke-opacity': ensureNumber,
+  'MarkersSymbolizer/stroke-width': ensureNumber,
+  'MarkersSymbolizer/fill-opacity': ensureNumber,
+  'MarkersSymbolizer/spacing': ensureNumber,
+
+  'LineSymbolizer/stroke-dasharray': (input) => input.replace(' ', '').split(','),
+  'LineSymbolizer/stroke-opacity': ensureNumber,
 }
 
 module.exports = function (layer) {
@@ -48,19 +114,30 @@ module.exports = function (layer) {
   layer.rules.forEach(function (group, i) {
     group.forEach(function (subgroup, j) {
       subgroup.forEach(function (symbolizer, k) {
-        const out = { id: layer.id, paint: {}, layout: {} }
+        const out = { id: layer.id, type: '', paint: {}, layout: {} }
         symbolizer.properties.forEach(function (prop) {
           try {
             const key = symbolizer.symbolizer + '/' + prop[0]
             let value = prop[1]
+
+            // key filter
             if (glEquiv[key] === '__omit__') {
               return
             }
             const gltype = glEquiv[key].split('/')
+
+            // value converter
             if (glConv[key]) {
               value = glConv[key](value)
             }
+
+            // finalize
             out[gltype[0]][gltype[1]] = value
+
+            // convert ellipse marker as in CartoCSS to circle as in GL
+            if (key === 'MarkersSymbolizer/marker-type' && value === 'ellipse') {
+              out['type'] = 'circle'
+            }
           } catch (e) {
             missed++
             console.log(symbolizer.symbolizer, '/', prop)
