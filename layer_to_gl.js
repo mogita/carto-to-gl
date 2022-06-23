@@ -5,7 +5,7 @@ const glEquiv = {
   'LineSymbolizer/stroke-width': 'paint/line-width',
   'PolygonSymbolizer/fill': 'paint/fill-color',
   'TextSymbolizer/size': 'layout/text-size',
-  'TextSymbolizer/fill': 'layout/text-color',
+  'TextSymbolizer/fill': 'paint/text-color',
   'TextSymbolizer/face-name': 'layout/text-font',
   'TextSymbolizer/wrap-width': 'layout/text-max-width',
   'TextSymbolizer/character-spacing': 'layout/text-letter-spacing',
@@ -21,8 +21,8 @@ const glEquiv = {
   'TextSymbolizer/text-transform': 'layout/text-transform',
   'TextSymbolizer/dx': 'layout/text-offset-x', // transitional equivalent
   'TextSymbolizer/dy': 'layout/text-offset-y', // transitional equivalent
-  'TextSymbolizer/halo-fill': 'layout/text-halo-color',
-  'TextSymbolizer/halo-radius': 'layout/text-halo-blur',
+  'TextSymbolizer/halo-fill': 'paint/text-halo-color',
+  'TextSymbolizer/halo-radius': 'paint/text-halo-blur',
   'TextSymbolizer/minimum-distance': 'layout/symbol-spacing',
   'TextSymbolizer/avoid-edges': 'layout/symbol-avoid-edges',
   'TextSymbolizer/line-spacing': 'layout/text-line-height',
@@ -87,6 +87,6 @@ module.exports = function (layer) {
       })
     })
   })
-  console.log('total gl styles missed:', missed)
+  console.log('unmatched carto styles in group:', missed)
   return layers
 }
