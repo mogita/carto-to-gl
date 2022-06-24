@@ -4,7 +4,12 @@ const glEquiv = {
   'LineSymbolizer/stroke': 'paint/line-color',
   'LineSymbolizer/stroke-width': 'paint/line-width',
 
+  'LinePatternSymbolizer/file': 'paint/line-pattern',
+
   'PolygonSymbolizer/fill': 'paint/fill-color',
+  'PolygonSymbolizer/fill-opacity': 'paint/fill-opacity',
+
+  'PolygonPatternSymbolizer/file': 'paint/background-pattern',
 
   'TextSymbolizer/size': 'layout/text-size',
   'TextSymbolizer/fill': 'paint/text-color',
@@ -65,6 +70,9 @@ const glEquiv = {
   'LineSymbolizer/stroke-linecap': 'layout/line-cap',
   'LineSymbolizer/stroke-linejoin': 'layout/line-join',
   'LineSymbolizer/stroke-opacity': 'paint/line-opacity',
+
+  'BuildingSymbolizer/height': '__omit__',
+  'BuildingSymbolizer/fill': 'paint/fill-color',
 }
 
 const pixelToEm = (input) => Number(input) * 0.063 // presuming the base font-size is 16px
@@ -73,6 +81,12 @@ const stringToBoolean = (input) => input === 'true' // turn string representatio
 const stringToArray = (input) => [input]
 
 const glConv = {
+  'LinePatternSymbolizer/file': (input) => ['image', input], // converting to "resolvedImage" expression in GL
+
+  'PolygonSymbolizer/fill-opacity': ensureNumber,
+
+  'PolygonPatternSymbolizer/file': (input) => ['image', input],
+
   'TextSymbolizer/allow-overlap': stringToBoolean,
   'TextSymbolizer/wrap-width': pixelToEm,
   'TextSymbolizer/face-name': stringToArray,
@@ -81,6 +95,7 @@ const glConv = {
   'TextSymbolizer/placement-type': () => 'point',
   'TextSymbolizer/horizontal-alignment': () => 'point',
   'TextSymbolizer/orientation': ensureNumber,
+  'TextSymbolizer/minimum-distance': ensureNumber,
   'TextSymbolizer/dx': pixelToEm,
   'TextSymbolizer/dy': pixelToEm,
   'TextSymbolizer/avoid-edges': stringToBoolean,
@@ -88,6 +103,7 @@ const glConv = {
   'TextSymbolizer/line-spacing': pixelToEm,
   'TextSymbolizer/spacing': ensureNumber,
   'TextSymbolizer/opacity': ensureNumber,
+  'TextSymbolizer/size': ensureNumber,
 
   'ShieldSymbolizer/size': ensureNumber,
   'ShieldSymbolizer/halo-radius': ensureNumber,
@@ -95,6 +111,8 @@ const glConv = {
   'ShieldSymbolizer/placement-type': () => 'point',
   'ShieldSymbolizer/face-name': stringToArray,
   'ShieldSymbolizer/avoid-edges': stringToBoolean,
+  'ShieldSymbolizer/minimum-distance': ensureNumber,
+  'ShieldSymbolizer/file': (input) => ['image', input],
 
   'MarkersSymbolizer/allow-overlap': stringToBoolean,
   'MarkersSymbolizer/placement': () => 'point',
@@ -103,10 +121,14 @@ const glConv = {
   'MarkersSymbolizer/stroke-width': ensureNumber,
   'MarkersSymbolizer/fill-opacity': ensureNumber,
   'MarkersSymbolizer/spacing': ensureNumber,
+  'MarkersSymbolizer/file': (input) => ['image', input],
+  'MarkersSymbolizer/marker-type': (input) => ['image', input],
 
   'LineSymbolizer/stroke-dasharray': (input) => input.replace(' ', '').split(','),
   'LineSymbolizer/stroke-opacity': ensureNumber,
 }
+
+let totalStyleProperties = 0
 
 module.exports = function (layer) {
   var layers = []
@@ -114,8 +136,9 @@ module.exports = function (layer) {
   layer.rules.forEach(function (group, i) {
     group.forEach(function (subgroup, j) {
       subgroup.forEach(function (symbolizer, k) {
-        const out = { id: layer.id, type: '', paint: {}, layout: {} }
+        const out = { id: layer.id, type: '', paint: {}, layout: {}, metadata: {} }
         symbolizer.properties.forEach(function (prop) {
+          totalStyleProperties++
           try {
             const key = symbolizer.symbolizer + '/' + prop[0]
             let value = prop[1]
@@ -134,9 +157,22 @@ module.exports = function (layer) {
             // finalize
             out[gltype[0]][gltype[1]] = value
 
-            // convert ellipse marker as in CartoCSS to circle as in GL
+            // guess the most possible "type" in a GL style
             if (key === 'MarkersSymbolizer/marker-type' && value === 'ellipse') {
-              out['type'] = 'circle'
+              // convert ellipse marker as in CartoCSS to circle as in GL
+              out.type = 'circle'
+            } else if (~['TextSymbolizer', 'ShieldSymbolizer', 'MarkersSymbolizer'].indexOf(symbolizer.symbolizer)) {
+              out.type = 'symbol'
+            } else if (~['LineSymbolizer', 'LinePatternSymbolizer'].indexOf(symbolizer.symbolizer)) {
+              out.type = 'line'
+            } else if (
+              ~['PolygonSymbolizer', 'BuildingSymbolizer', 'PolygonPatternSymbolizer'].indexOf(symbolizer.symbolizer)
+            ) {
+              out.type = 'fill'
+            } else {
+              out.metadata['carto_key'] = key
+              out.metadata['carto_val'] = value
+              console.log('GL style "type" unknown yet:', key, '/', value)
             }
           } catch (e) {
             missed++
@@ -160,10 +196,12 @@ module.exports = function (layer) {
         }
 
         out.id = layer.id + [, i, j, k].join('-')
+
         layers.push(out)
       })
     })
   })
   console.log('unmatched carto styles in group:', missed)
+  console.log('total styles properties so far:', totalStyleProperties)
   return layers
 }
