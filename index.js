@@ -27,7 +27,7 @@ carto.Renderer.prototype.render = function render(m) {
   carto.tree.Reference.setVersion(this.options.mapnik_version)
 
   var output = {
-    version: 7,
+    version: 8,
     layers: [],
     sources: [],
   }
@@ -97,7 +97,7 @@ carto.Renderer.prototype.render = function render(m) {
     source.styles.forEach(function (layer) {
       output.layers.forEach(function (l) {
         if (l.__original__layer === layer) {
-          l.source = source.id
+          l.source = `layer_${source.id.toLowerCase()}`
           delete l.__original__layer
         }
       })
