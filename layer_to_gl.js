@@ -79,8 +79,11 @@ const pixelToEm = (input) => Number(input) * 0.063 // presuming the base font-si
 const ensureNumber = (input) => Number(input)
 const stringToBoolean = (input) => input === 'true' // turn string representation of 'true' or 'false' to an actual boolean
 const stringToArray = (input) => [input]
+const clampFn = (min, max) => (input) => Math.min(Math.max(input, min), max)
+const replaceNullWithFn = (alt) => (input) => input === null ? alt : input
 
 const glConv = {
+  'LineSymbolizer/stroke-width': ensureNumber,
   'LinePatternSymbolizer/file': (input) => ['image', input], // converting to "resolvedImage" expression in GL
 
   'PolygonSymbolizer/fill-opacity': ensureNumber,
@@ -94,7 +97,7 @@ const glConv = {
   'TextSymbolizer/placement': () => 'point',
   'TextSymbolizer/placement-type': () => 'point',
   'TextSymbolizer/horizontal-alignment': () => 'point',
-  'TextSymbolizer/orientation': ensureNumber,
+  'TextSymbolizer/orientation': [ensureNumber, replaceNullWithFn(0)],
   'TextSymbolizer/minimum-distance': ensureNumber,
   'TextSymbolizer/dx': pixelToEm,
   'TextSymbolizer/dy': pixelToEm,
@@ -124,8 +127,12 @@ const glConv = {
   'MarkersSymbolizer/file': (input) => ['image', input],
   'MarkersSymbolizer/marker-type': (input) => ['image', input],
 
-  'LineSymbolizer/stroke-dasharray': (input) => input.replace(' ', '').split(','),
-  'LineSymbolizer/stroke-opacity': ensureNumber,
+  'LineSymbolizer/stroke-dasharray': (input) =>
+    input
+      .replace(' ', '')
+      .split(',')
+      .map((n) => Number(n)),
+  'LineSymbolizer/stroke-opacity': [ensureNumber, clampFn(0, 1)],
 }
 
 let totalStyleProperties = 0
@@ -151,7 +158,11 @@ module.exports = function (layer) {
 
             // value converter
             if (glConv[key]) {
-              value = glConv[key](value)
+              let fnChain = glConv[key]
+              if (!Array.isArray(fnChain)) {
+                fnChain = [fnChain]
+              }
+              fnChain.forEach((fn) => (value = fn(value)))
             }
 
             // finalize

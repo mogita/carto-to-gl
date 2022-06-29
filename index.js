@@ -97,12 +97,20 @@ carto.Renderer.prototype.render = function render(m) {
     source.styles.forEach(function (layer) {
       output.layers.forEach(function (l) {
         if (l.__original__layer === layer) {
-          l.source = `layer_${source.id.toLowerCase()}`
+          l.source = 'sla'
+          l['source-layer'] = `layer_${source.id.toLowerCase()}`
           delete l.__original__layer
         }
       })
     })
   })
+
+  output.sources = {
+    sla: {
+      url: 'http://localhost:8000/services/tiles.sg16',
+      type: 'vector',
+    },
+  }
 
   return output
 }
